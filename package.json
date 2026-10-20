@@ -1,0 +1,55 @@
+{
+  "name": "@ethos6/freeflow",
+  "version": "1.0.0",
+  "description": "Run Claude Code and any coding agent on 58 model providers, free tiers first, with automatic fallback when one hits its limit.",
+  "type": "module",
+  "bin": {
+    "freeflow": "bin/freeflow.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node bin/freeflow.js start",
+    "test": "node --test test/*.test.js",
+    "test:sdk": "node --test test/sdk/*.test.js",
+    "test:e2e": "node test/e2e/claude-code.mjs",
+    "typecheck": "tsc -p jsconfig.json",
+    "docs": "node scripts/gen-provider-docs.js"
+  },
+  "keywords": [
+    "claude-code",
+    "coding-agent",
+    "llm-gateway",
+    "anthropic",
+    "openai-compatible",
+    "free-tier",
+    "fallback",
+    "proxy",
+    "openrouter",
+    "groq",
+    "gemini",
+    "nvidia-nim",
+    "ollama"
+  ],
+  "author": "Ethos 6",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ethos6/freeflow.git"
+  },
+  "homepage": "https://github.com/Ethos6/freeflow#readme",
+  "bugs": "https://github.com/Ethos6/freeflow/issues",
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.71.0",
+    "@types/node": "^22.20.5",
+    "openai": "^6.10.0",
+    "typescript": "^5.9.3"
+  }
+}
