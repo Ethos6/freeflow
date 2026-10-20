@@ -47,9 +47,9 @@
   "homepage": "https://github.com/Ethos6/freeflow#readme",
   "bugs": "https://github.com/Ethos6/freeflow/issues",
   "devDependencies": {
-    "@anthropic-ai/sdk": "^0.71.0",
-    "@types/node": "^22.20.5",
-    "openai": "^6.10.0",
-    "typescript": "^5.9.3"
+    "@anthropic-ai/sdk": "^0.135.0",
+    "@types/node": "^26.6.5",
+    "openai": "^7.37.0",
+    "typescript": "^7.0.2"
   }
 }
