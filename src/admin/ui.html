@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>freeflow</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2310b981'/%3E%3Cpath d='M7 20c4-8 8 4 12-4s5-6 6-6' stroke='white' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--panel2:#f1f3f6;--line:#e2e5ea;--text:#141820;--muted:#5d6675;--faint:#8a93a3;
+  --accent:#0f9f75;--accent-ink:#ffffff;--accent-soft:#e3f6ef;--warn:#b26a00;--warn-soft:#fff3dc;--bad:#c2362b;--bad-soft:#fde8e6;
+  --info:#2f62d6;--info-soft:#e7eefc;--radius:12px;--shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0d1014;--panel:#151a20;--panel2:#1b2129;--line:#262e38;--text:#e8ecf1;--muted:#9aa4b2;--faint:#6b7684;
+  --accent:#2bd19b;--accent-ink:#06261b;--accent-soft:#11302a;--warn:#f0b04a;--warn-soft:#32270f;--bad:#ff7b6e;--bad-soft:#3a1c19;
+  --info:#7aa2ff;--info-soft:#1a2440;--shadow:none;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+a{color:var(--info)}
+button,input,select{font:inherit;color:inherit}
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar{max-width:1120px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.01em}
+.brand svg{width:28px;height:28px}
+.ver{font-weight:500;color:var(--faint);font-size:12px}
+nav{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+nav button{border:0;background:none;padding:7px 12px;border-radius:8px;color:var(--muted);cursor:pointer;font-weight:550}
+nav button[aria-selected=true]{background:var(--panel);color:var(--text);box-shadow:var(--shadow);outline:1px solid var(--line)}
+main{max-width:1120px;margin:0 auto;padding:20px 16px 60px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);min-width:0}
+.card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:baseline;gap:4px 8px;flex-wrap:wrap}
+.card h2 .sub{font-weight:450;color:var(--muted);font-size:13px}
+.kpi .n{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.kpi .l{color:var(--muted);font-size:12.5px}
+.muted{color:var(--muted)}.faint{color:var(--faint)}.small{font-size:12.5px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill.ok{background:var(--accent-soft);color:var(--accent)}.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}.pill.info{background:var(--info-soft);color:var(--info)}
+.pill.plain{background:var(--panel2);color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);padding:7px 12px;border-radius:9px;cursor:pointer;font-weight:550;white-space:nowrap}
+.btn:hover{background:var(--panel2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn.danger{color:var(--bad)}
+.btn.sm{padding:4px 9px;font-size:12.5px;border-radius:7px}
+.btn:disabled{opacity:.5;cursor:default}
+input[type=text],input[type=password],input[type=url],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);min-width:0}
+input:focus,select:focus,button:focus-visible{outline:2px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:1px}
+label.f{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 4px;font-weight:550}
+.row{display:flex;gap:8px;align-items:center;min-width:0}
+.row>.grow{flex:1;min-width:0}
+code,.mono{font-family:var(--mono);font-size:12.5px}
+.cmd{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-family:var(--mono);font-size:12.5px;overflow:auto}
+.cmd span{flex:1;white-space:nowrap}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:4px 11px;cursor:pointer;font-size:12.5px;font-weight:550;color:var(--muted)}
+.chip[aria-pressed=true]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.plist{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.pcard{text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:11px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:6px;min-width:0}
+.pcard:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.pcard .t{display:flex;justify-content:space-between;gap:8px;align-items:center;font-weight:650}
+.pcard .t span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.routes .r{display:grid;grid-template-columns:110px 1fr 160px auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line)}
+.routes .r:last-child{border-bottom:0}
+.routes .name{font-weight:650}
+.routes .name small{display:block;color:var(--faint);font-weight:450;font-size:11.5px}
+.fb{display:grid;grid-template-columns:28px 1fr 160px auto;gap:8px;align-items:center;padding:6px 0}
+.fb .ix{color:var(--faint);font-family:var(--mono);text-align:center}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600}
+td{font-size:13px}
+#act td.mono{white-space:nowrap}
+.tablewrap{overflow-x:auto}
+.empty{color:var(--muted);text-align:center;padding:28px 10px}
+dialog{border:1px solid var(--line);border-radius:14px;padding:0;background:var(--panel);color:var(--text);width:min(560px,calc(100vw - 32px));box-shadow:0 20px 50px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(5,8,12,.45)}
+.dhead{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.dbody{padding:4px 18px 18px;max-height:70vh;overflow:auto}
+.dfoot{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.models{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:9px;margin-top:8px}
+.models button{display:flex;justify-content:space-between;width:100%;border:0;border-bottom:1px solid var(--line);background:none;padding:7px 10px;text-align:left;cursor:pointer;font-family:var(--mono);font-size:12.5px;gap:8px}
+.models button:last-child{border-bottom:0}
+.models button:hover{background:var(--panel2)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 14px;border-radius:10px;font-weight:550;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1}
+.hide{display:none!important}
+.steps{counter-reset:s;display:grid;gap:12px;margin:0;padding:0;list-style:none}
+.steps li{counter-increment:s;display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
+.steps li::before{content:counter(s);width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:12.5px}
+@media (max-width:640px){
+  .routes .r{grid-template-columns:1fr auto;gap:6px}
+  .routes .r .name,.routes .r input{grid-column:1/-1}
+  .fb{grid-template-columns:24px 1fr;gap:6px}
+  .fb .ix{text-align:left}
+  .fb select,.fb>.row,.fb>.btn{grid-column:2}
+  nav{margin-left:0;width:100%}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><path d="M7 20c4-8 8 4 12-4s5-6 6-6" stroke="var(--accent-ink)" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+      freeflow <span class="ver">v__FREEFLOW_VERSION__</span>
+    </div>
+    <span id="status" class="pill plain"><span class="dot"></span>connecting</span>
+    <nav role="tablist">
+      <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+      <button role="tab" data-tab="providers" aria-selected="false">Providers</button>
+      <button role="tab" data-tab="routing" aria-selected="false">Routing</button>
+      <button role="tab" data-tab="activity" aria-selected="false">Activity</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- OVERVIEW -->
+  <section data-panel="overview" class="grid">
+    <div id="setup" class="card hide">
+      <h2>Get coding in three steps</h2>
+      <ol class="steps">
+        <li><div><b>Add a key.</b> <span class="muted">Open <a href="#" data-goto="providers">Providers</a> and paste a key for any provider. Free tiers are listed first (NVIDIA NIM, Groq, Gemini, OpenRouter and more).</span></div></li>
+        <li><div><b>Pick models.</b> <span class="muted">In <a href="#" data-goto="routing">Routing</a>, choose a default model and add a few fallbacks from other providers.</span></div></li>
+        <li><div><b>Start your agent.</b> <span class="muted">Run one of the commands below. When a provider hits its limit, freeflow moves to the next one by itself.</span></div></li>
+      </ol>
+    </div>
+    <div class="grid g4">
+      <div class="card kpi"><div class="n" id="k-ready">0</div><div class="l">providers connected</div></div>
+      <div class="card kpi"><div class="n" id="k-chain">0</div><div class="l">models in the fallback chain</div></div>
+      <div class="card kpi"><div class="n" id="k-req">0</div><div class="l">requests this session</div></div>
+      <div class="card kpi"><div class="n" id="k-saved">0</div><div class="l">requests rescued by fallback</div></div>
+    </div>
+    <div class="grid g2">
+      <div class="card">
+        <h2>Start an agent <span class="sub">freeflow starts with it</span></h2>
+        <div class="grid" style="gap:8px" id="cmds"></div>
+        <p class="small muted" style="margin:12px 0 0">Using another tool? Point any Anthropic-compatible client at <code id="base1"></code>, or any OpenAI-compatible one at <code id="base2"></code> with model <code>default</code>.</p>
+      </div>
+      <div class="card">
+        <h2>Current route</h2>
+        <div id="route-summary"></div>
+        <h2 style="margin-top:16px">Cooling down <span class="sub">skipped until they recover</span></h2>
+        <div id="cooling"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Proxy protection</h2>
+      <p class="muted small" style="margin:0 0 10px">freeflow only listens on this computer. Turn on a proxy token if other local programs or users should not be able to use your keys through it.</p>
+      <div class="row" style="flex-wrap:wrap"><span id="tok-state"></span><button class="btn sm" id="tok-on">Create token</button><button class="btn sm danger" id="tok-off">Turn off</button></div>
+      <div id="tok-val" class="cmd hide" style="margin-top:10px"><span></span><button class="btn sm" data-copy-from="tok-val">Copy</button></div>
+    </div>
+  </section>
+
+  <!-- PROVIDERS -->
+  <section data-panel="providers" class="hide">
+    <div class="toolbar">
+      <input type="text" id="q" placeholder="Search 58 providers…" style="max-width:280px" aria-label="Search providers">
+      <div class="chips" id="tiers">
+        <button class="chip" data-tier="all" aria-pressed="true">All</button>
+        <button class="chip" data-tier="ready" aria-pressed="false">Connected</button>
+        <button class="chip" data-tier="free" aria-pressed="false">Free tier</button>
+        <button class="chip" data-tier="plan" aria-pressed="false">Plans</button>
+        <button class="chip" data-tier="paid" aria-pressed="false">Pay as you go</button>
+        <button class="chip" data-tier="local" aria-pressed="false">Local</button>
+      </div>
+      <button class="btn sm" id="add-custom" style="margin-left:auto">+ Custom endpoint</button>
+    </div>
+    <div class="plist" id="plist"></div>
+    <p class="small faint" style="margin-top:14px">Free tiers, limits and model lists are set by each provider and change often. freeflow uses one key per provider and respects each provider's limits; when one is exhausted it moves on to the next provider in your chain.</p>
+  </section>
+
+  <!-- ROUTING -->
+  <section data-panel="routing" class="grid hide">
+    <div class="card routes">
+      <h2>Model routes <span class="sub">which model answers each kind of request</span></h2>
+      <div id="routes"></div>
+    </div>
+    <div class="card">
+      <h2>Fallback chain <span class="sub">tried in order when the route's model fails or is rate limited</span></h2>
+      <div id="fallbacks"></div>
+      <div class="fb" style="border-top:1px solid var(--line);margin-top:6px;padding-top:12px">
+        <span class="ix">+</span>
+        <input type="text" id="fb-new" list="known-models" placeholder="provider/model, e.g. groq/llama-3.3-70b-versatile">
+        <select id="fb-new-effort" aria-label="Reasoning effort"></select>
+        <button class="btn sm" id="fb-add">Add</button>
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end"><span class="small muted" id="route-msg"></span><button class="btn primary" id="save-routes">Save routing</button></div>
+    <datalist id="known-models"></datalist>
+  </section>
+
+  <!-- ACTIVITY -->
+  <section data-panel="activity" class="hide">
+    <div class="card">
+      <h2>Live activity <span class="sub">last 100 requests</span></h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Time</th><th>Asked for</th><th>Served by</th><th>Result</th><th>Tokens in / out</th><th>Duration</th></tr></thead>
+        <tbody id="act"></tbody>
+      </table></div>
+      <div id="act-empty" class="empty">No requests yet. Start an agent and they will appear here as they happen.</div>
+    </div>
+  </section>
+</main>
+
+<dialog id="pdlg">
+  <div class="dhead"><div><div id="d-name" style="font-weight:700;font-size:16px"></div><div id="d-meta" class="small muted"></div></div><button class="btn sm" data-close>Close</button></div>
+  <div class="dbody">
+    <p id="d-note" class="small muted hide"></p>
+    <div id="d-keywrap">
+      <label class="f" for="d-key">API key <span id="d-keystate" class="faint"></span></label>
+      <div class="row"><input class="grow" type="password" id="d-key" autocomplete="off" spellcheck="false" placeholder="Paste a key to add or replace it"><a id="d-keyurl" class="btn sm" target="_blank" rel="noopener">Get a key ↗</a></div>
+    </div>
+    <div id="d-acctwrap" class="hide"><label class="f" for="d-acct">Account id</label><input type="text" id="d-acct" placeholder="Cloudflare account id"></div>
+    <label class="f" for="d-base">Base URL <span class="faint">(leave empty for the default)</span></label>
+    <input type="url" id="d-base" spellcheck="false">
+    <label class="row f" style="gap:6px;margin-top:12px"><input type="checkbox" id="d-disabled"> Disable this provider without removing its key</label>
+    <div style="margin-top:16px" class="row"><b class="grow">Models</b><button class="btn sm" id="d-load">Load models</button></div>
+    <input type="text" id="d-filter" class="hide" placeholder="Filter models…" style="margin-top:8px">
+    <div id="d-models" class="small muted" style="margin-top:6px">Load the provider's model list to add models to your routes in one click.</div>
+    <div id="d-test" class="small" style="margin-top:10px"></div>
+  </div>
+  <div class="dfoot">
+    <button class="btn danger" id="d-remove">Remove key</button>
+    <button class="btn" id="d-try">Test a model</button>
+    <button class="btn primary" id="d-save">Save</button>
+  </div>
+</dialog>
+
+<dialog id="cdlg">
+  <div class="dhead"><b>Custom endpoint</b><button class="btn sm" data-close>Close</button></div>
+  <div class="dbody">
+    <p class="small muted">Any server that speaks the OpenAI Chat Completions API (vLLM, LiteLLM, a company gateway) or the Anthropic Messages API.</p>
+    <label class="f" for="c-id">Short id <span class="faint">(used as the model prefix, e.g. mylab/model)</span></label><input type="text" id="c-id" placeholder="mylab">
+    <label class="f" for="c-name">Name</label><input type="text" id="c-name" placeholder="My lab server">
+    <label class="f" for="c-base">Base URL</label><input type="url" id="c-base" placeholder="http://10.0.0.5:8000/v1">
+    <label class="f" for="c-format">API format</label><select id="c-format"><option value="openai">OpenAI Chat Completions</option><option value="anthropic">Anthropic Messages</option></select>
+    <label class="f" for="c-key">API key <span class="faint">(optional)</span></label><input type="password" id="c-key" autocomplete="off">
+  </div>
+  <div class="dfoot"><button class="btn primary" id="c-save">Add endpoint</button></div>
+</dialog>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const TOKEN = "__FREEFLOW_ADMIN_TOKEN__";
+const EFFORTS = [["client","Effort: from agent"],["off","Effort: off"],["low","Effort: low"],["medium","Effort: medium"],["high","Effort: high"]];
+const TIER_LABEL = {free:"Free tier",plan:"Plan",paid:"Pay as you go",local:"Local",custom:"Custom"};
+const TIER_CLASS = {free:"ok",plan:"info",paid:"plain",local:"info",custom:"plain"};
+const ROUTE_ROWS = [["default","Default","everything else"],["opus","Opus","hardest work"],["sonnet","Sonnet","most turns"],["haiku","Haiku","quick tasks"],["fable","Fable","newest tier"]];
+let S = null, tierFilter = "all", draft = null, current = null;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const configured = (p) => p.ready && (!!p.key || p.custom);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+async function api(path, body) {
+  const r = await fetch("/admin/api" + path, body === undefined ? {headers:{"x-freeflow-admin":TOKEN}} : {method:"POST",headers:{"x-freeflow-admin":TOKEN,"content-type":"application/json"},body:JSON.stringify(body)});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 2600); }
+function copy(text) { navigator.clipboard?.writeText(text).then(() => toast("Copied"), () => toast("Copy failed")); }
+
+// ---------- tabs
+function show(tab) {
+  $$("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
+  $$("[data-panel]").forEach((p) => p.classList.toggle("hide", p.dataset.panel !== tab));
+  try { localStorage.setItem("ff-tab", tab); } catch {}
+}
+$$("nav button").forEach((b) => b.onclick = () => show(b.dataset.tab));
+document.addEventListener("click", (e) => {
+  const g = e.target.closest("[data-goto]"); if (g) { e.preventDefault(); show(g.dataset.goto); }
+  const c = e.target.closest("[data-copy]"); if (c) copy(c.dataset.copy);
+  const cf = e.target.closest("[data-copy-from]"); if (cf) copy($("#" + cf.dataset.copyFrom + " span").textContent);
+  const x = e.target.closest("[data-close]"); if (x) x.closest("dialog").close();
+});
+
+// ---------- render
+function render() {
+  const ready = S.providers.filter(configured);
+  const chain = [...new Set([...Object.values(S.routes).map((r) => r && r.model), ...S.fallbacks.map((f) => f.model)].filter(Boolean))];
+  $("#k-ready").textContent = ready.length;
+  $("#k-chain").textContent = chain.length;
+  $("#k-req").textContent = S.activity.length;
+  $("#k-saved").textContent = S.activity.filter((a) => a.status === 200 && a.attempts.some((t) => t.error)).length;
+  $("#setup").classList.toggle("hide", ready.length > 0 && !!S.routes.default);
+  const base = `http://${S.host}:${S.port}`;
+  $("#base1").textContent = base; $("#base2").textContent = base + "/v1";
+  $("#cmds").innerHTML = [["Claude Code","freeflow claude"],["OpenCode","freeflow opencode"],["Aider","freeflow aider"],["Any other tool","freeflow env"]]
+    .map(([n, c]) => `<div class="cmd"><b style="font-family:inherit;min-width:110px">${n}</b><span>${c}</span><button class="btn sm" data-copy="${c}">Copy</button></div>`).join("");
+  $("#route-summary").innerHTML = S.routes.default
+    ? `<div class="grid" style="gap:6px">${ROUTE_ROWS.filter(([k]) => S.routes[k]).map(([k, n]) => `<div class="row"><span class="pill plain" style="min-width:70px;justify-content:center">${n}</span><code class="grow" style="overflow:hidden;text-overflow:ellipsis">${esc(S.routes[k].model)}</code></div>`).join("")}
+       <div class="small muted" style="margin-top:4px">then ${S.fallbacks.length} fallback${S.fallbacks.length === 1 ? "" : "s"}</div></div>`
+    : `<p class="muted" style="margin:0">No default model yet. <a href="#" data-goto="routing">Choose one</a>.</p>`;
+  $("#cooling").innerHTML = S.health.length
+    ? S.health.map((h) => `<div class="row small" style="margin-bottom:6px"><span class="pill warn">${h.secondsLeft}s</span><code>${esc(h.key)}</code><span class="faint grow" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(h.reason)}">${esc(h.reason)}</span></div>`).join("")
+    : `<p class="muted small" style="margin:0">Everything is healthy.</p>`;
+  $("#tok-state").innerHTML = S.proxyToken ? `<span class="pill ok"><span class="dot"></span>Token required</span>` : `<span class="pill plain">Off</span>`;
+  $("#tok-off").classList.toggle("hide", !S.proxyToken);
+  renderProviders(); renderActivity();
+  if (!draft) { draft = {routes: structuredClone(S.routes), fallbacks: structuredClone(S.fallbacks)}; renderRouting(); }
+  $("#status").className = "pill ok"; $("#status").innerHTML = `<span class="dot"></span>running`;
+}
+
+function renderProviders() {
+  const q = $("#q").value.trim().toLowerCase();
+  const list = S.providers.filter((p) =>
+    (tierFilter === "all" || (tierFilter === "ready" ? configured(p) : p.tier === tierFilter)) &&
+    (!q || (p.name + " " + p.id + " " + (p.example || "")).toLowerCase().includes(q)));
+  const order = {free:0,plan:1,paid:2,local:3,custom:4};
+  list.sort((a, b) => (configured(b) - configured(a)) || (order[a.tier] - order[b.tier]) || a.name.localeCompare(b.name));
+  $("#plist").innerHTML = list.map((p) => `
+    <button class="pcard" data-pid="${esc(p.id)}">
+      <div class="t"><span>${esc(p.name)}</span>${p.disabled ? `<span class="pill warn">disabled</span>` : configured(p) ? `<span class="pill ok"><span class="dot"></span>${p.keySource.startsWith("env") ? "env key" : p.custom && !p.key ? "added" : "key set"}</span>` : p.keyOptional ? `<span class="pill plain">no key needed</span>` : ""}</div>
+      <div class="row small"><span class="pill ${TIER_CLASS[p.tier]}">${TIER_LABEL[p.tier]}</span><code class="faint" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.id)}/${esc(p.example || "model")}</code></div>
+    </button>`).join("") || `<div class="empty">No provider matches.</div>`;
+  $$(".pcard").forEach((b) => b.onclick = () => openProvider(b.dataset.pid));
+}
+
+function effortSelect(value) {
+  return `<select aria-label="Reasoning effort">${EFFORTS.map(([v, l]) => `<option value="${v}" ${v === (value || "client") ? "selected" : ""}>${l}</option>`).join("")}</select>`;
+}
+function renderRouting() {
+  $("#routes").innerHTML = ROUTE_ROWS.map(([k, n, d]) => `
+    <div class="r" data-route="${k}">
+      <div class="name">${n}<small>${d}</small></div>
+      <input type="text" list="known-models" value="${esc(draft.routes[k]?.model || "")}" placeholder="${k === "default" ? "provider/model (required)" : "use default"}" spellcheck="false">
+      ${effortSelect(draft.routes[k]?.effort)}
+      <button class="btn sm" data-clear title="Clear">✕</button>
+    </div>`).join("");
+  $$("#routes .r").forEach((row) => {
+    const k = row.dataset.route;
+    const sync = () => {
+      const m = $("input", row).value.trim(), e = $("select", row).value;
+      if (m) draft.routes[k] = e === "client" ? {model: m} : {model: m, effort: e}; else delete draft.routes[k];
+      dirty();
+    };
+    $("input", row).oninput = sync; $("select", row).onchange = sync;
+    $("[data-clear]", row).onclick = () => { $("input", row).value = ""; sync(); };
+  });
+  $("#fallbacks").innerHTML = draft.fallbacks.length ? draft.fallbacks.map((f, i) => `
+    <div class="fb" data-i="${i}">
+      <span class="ix">${i + 1}</span>
+      <input type="text" list="known-models" value="${esc(f.model)}" spellcheck="false">
+      ${effortSelect(f.effort)}
+      <div class="row"><button class="btn sm" data-up ${i ? "" : "disabled"} title="Move up">↑</button><button class="btn sm" data-down ${i < draft.fallbacks.length - 1 ? "" : "disabled"} title="Move down">↓</button><button class="btn sm danger" data-del title="Remove">✕</button></div>
+    </div>`).join("") : `<p class="muted small" style="margin:4px 0 8px">No fallbacks yet. Add models from <b>different providers</b>, so one provider's limit never stops you.</p>`;
+  $$("#fallbacks .fb").forEach((row) => {
+    const i = +row.dataset.i;
+    $("input", row).oninput = (e) => { draft.fallbacks[i].model = e.target.value.trim(); dirty(); };
+    $("select", row).onchange = (e) => { e.target.value === "client" ? delete draft.fallbacks[i].effort : (draft.fallbacks[i].effort = e.target.value); dirty(); };
+    $("[data-up]", row).onclick = () => { [draft.fallbacks[i - 1], draft.fallbacks[i]] = [draft.fallbacks[i], draft.fallbacks[i - 1]]; renderRouting(); dirty(); };
+    $("[data-down]", row).onclick = () => { [draft.fallbacks[i + 1], draft.fallbacks[i]] = [draft.fallbacks[i], draft.fallbacks[i + 1]]; renderRouting(); dirty(); };
+    $("[data-del]", row).onclick = () => { draft.fallbacks.splice(i, 1); renderRouting(); dirty(); };
+  });
+  $("#fb-new-effort").innerHTML = $("select", document.createRange().createContextualFragment(effortSelect())).innerHTML;
+  const known = new Set(S.providers.filter((p) => p.ready && p.example && !p.example.startsWith("<")).map((p) => `${p.id}/${p.example}`));
+  for (const m of loadedModels) known.add(m);
+  $("#known-models").innerHTML = [...known].sort().map((m) => `<option value="${esc(m)}">`).join("");
+}
+const loadedModels = new Set();
+function dirty() { $("#route-msg").textContent = "Unsaved changes"; }
+$("#fb-add").onclick = () => {
+  const m = $("#fb-new").value.trim(); if (!m) return;
+  const e = $("#fb-new-effort").value;
+  draft.fallbacks.push(e === "client" ? {model: m} : {model: m, effort: e});
+  $("#fb-new").value = ""; renderRouting(); dirty();
+};
+$("#save-routes").onclick = async () => {
+  try {
+    const fallbacks = draft.fallbacks.filter((f) => f.model);
+    S = await api("/routes", {routes: draft.routes, fallbacks});
+    draft = null; render(); $("#route-msg").textContent = ""; toast("Routing saved; it applies to the next request");
+  } catch (e) { $("#route-msg").textContent = e.message; }
+};
+
+function renderActivity() {
+  const rows = [...S.activity].reverse();
+  $("#act-empty").classList.toggle("hide", rows.length > 0);
+  $("#act").innerHTML = rows.map((a) => {
+    const hops = a.attempts.filter((t) => t.error);
+    const res = a.status === 200 ? (hops.length ? `<span class="pill warn">ok after ${hops.length} fallback${hops.length > 1 ? "s" : ""}</span>` : `<span class="pill ok">ok</span>`) : `<span class="pill bad">${a.status}</span>`;
+    const why = hops.map((h) => `${h.ref}: ${h.error}`).concat(a.notes || []).join("\n");
+    return `<tr title="${esc(why)}"><td class="mono">${new Date(a.at).toLocaleTimeString()}</td><td class="mono">${esc(a.requested)}</td><td class="mono">${esc(a.served || "—")}</td><td>${res}${why ? `<div class="small faint" style="max-width:340px;white-space:pre-wrap">${esc(why.slice(0, 300))}</div>` : ""}</td><td class="mono">${a.inputTokens != null ? `${a.inputTokens.toLocaleString()} / ${a.outputTokens.toLocaleString()}` : "—"}</td><td class="mono">${(a.ms / 1000).toFixed(1)}s</td></tr>`;
+  }).join("");
+}
+
+// ---------- provider dialog
+function openProvider(id) {
+  current = S.providers.find((p) => p.id === id);
+  const p = current;
+  $("#d-name").textContent = p.name;
+  $("#d-meta").innerHTML = `${TIER_LABEL[p.tier]} · models are <code>${esc(p.id)}/…</code>${p.env ? ` · env <code>${esc(p.env)}</code>` : ""}`;
+  $("#d-note").textContent = p.note || ""; $("#d-note").classList.toggle("hide", !p.note);
+  $("#d-keywrap").classList.toggle("hide", p.tier === "local");
+  $("#d-key").value = "";
+  $("#d-keystate").textContent = p.key ? `(saved: ${p.key}${p.keySource.startsWith("env") ? " from " + p.keySource.slice(4) : ""})` : p.keyOptional ? "(optional)" : "";
+  $("#d-keyurl").classList.toggle("hide", !p.keyUrl); if (p.keyUrl) $("#d-keyurl").href = p.keyUrl;
+  $("#d-acctwrap").classList.toggle("hide", !p.needs.includes("accountId")); $("#d-acct").value = p.accountId;
+  $("#d-base").value = p.baseUrl; $("#d-base").placeholder = p.defaultBaseUrl || "https://…/v1";
+  $("#d-disabled").checked = p.disabled;
+  $("#d-remove").classList.toggle("hide", !(p.key && p.keySource === "config") && !p.custom);
+  $("#d-remove").textContent = p.custom ? "Remove endpoint" : "Remove key";
+  $("#d-models").innerHTML = "Load the provider's model list to add models to your routes in one click.";
+  $("#d-filter").classList.add("hide"); $("#d-test").textContent = "";
+  $("#pdlg").showModal();
+}
+async function saveProvider(quiet) {
+  const body = {id: current.id, baseUrl: $("#d-base").value, disabled: $("#d-disabled").checked};
+  if ($("#d-key").value.trim()) body.key = $("#d-key").value;
+  if (current.needs.includes("accountId")) body.accountId = $("#d-acct").value;
+  S = await api("/provider", body); current = S.providers.find((p) => p.id === current.id);
+  $("#d-key").value = ""; render();
+  if (!quiet) toast(current.ready ? `${current.name} is ready` : "Saved");
+}
+$("#d-save").onclick = async () => { try { await saveProvider(); $("#pdlg").close(); } catch (e) { toast(e.message); } };
+$("#d-remove").onclick = async () => {
+  try {
+    S = current.custom ? await api("/custom", {id: current.id, remove: true}) : await api("/provider", {id: current.id, key: ""});
+    render(); $("#pdlg").close(); toast("Removed");
+  } catch (e) { toast(e.message); }
+};
+$("#d-load").onclick = async () => {
+  try {
+    if ($("#d-key").value.trim() || $("#d-base").value !== current.baseUrl || $("#d-acct").value !== current.accountId) await saveProvider(true);
+    $("#d-models").textContent = "Loading…";
+    const r = await fetch(`/admin/api/models?provider=${encodeURIComponent(current.id)}&refresh=1`, {headers:{"x-freeflow-admin":TOKEN}});
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error);
+    const list = j.models.map((m) => `${current.id}/${m}`);
+    list.forEach((m) => loadedModels.add(m));
+    $("#d-filter").classList.toggle("hide", list.length < 12); $("#d-filter").value = "";
+    const draw = () => {
+      const f = $("#d-filter").value.toLowerCase();
+      const shown = list.filter((m) => !f || m.toLowerCase().includes(f)).slice(0, 400);
+      $("#d-models").innerHTML = `<div class="small muted">${list.length} models. Click one to set it as default, or use + to add it as a fallback.</div><div class="models">${shown.map((m) => `<button data-m="${esc(m)}"><span>${esc(m)}</span><span class="row"><span class="pill plain" data-act="default">default</span><span class="pill ok" data-act="fallback">+ fallback</span></span></button>`).join("")}</div>`;
+      $$("#d-models button").forEach((b) => b.onclick = (e) => {
+        const act = e.target.closest("[data-act]")?.dataset.act || "default";
+        draft = draft || {routes: structuredClone(S.routes), fallbacks: structuredClone(S.fallbacks)};
+        if (act === "default") { draft.routes.default = {model: b.dataset.m}; toast("Set as default; save on the Routing tab"); }
+        else if (!draft.fallbacks.some((f) => f.model === b.dataset.m)) { draft.fallbacks.push({model: b.dataset.m}); toast("Added to fallbacks; save on the Routing tab"); }
+        renderRouting(); dirty();
+      });
+    };
+    $("#d-filter").oninput = draw; draw(); renderRouting();
+  } catch (e) { $("#d-models").innerHTML = `<span style="color:var(--bad)">${esc(e.message)}</span>`; }
+};
+$("#d-try").onclick = async () => {
+  const guess = [...loadedModels].find((m) => m.startsWith(current.id + "/")) || (current.example && !current.example.startsWith("<") ? `${current.id}/${current.example}` : "");
+  const model = prompt("Model to test (provider/model)", guess); if (!model) return;
+  try {
+    if ($("#d-key").value.trim()) await saveProvider(true);
+    $("#d-test").textContent = "Testing…";
+    const r = await api("/test", {model});
+    $("#d-test").innerHTML = r.ok ? `<span class="pill ok">works</span> ${r.ms} ms · replied “${esc(r.reply)}”` : `<span class="pill bad">${esc(r.kind)}</span> ${esc(r.error)}`;
+  } catch (e) { $("#d-test").textContent = e.message; }
+};
+
+// ---------- custom endpoints
+$("#add-custom").onclick = () => { ["c-id","c-name","c-base","c-key"].forEach((i) => $("#" + i).value = ""); $("#cdlg").showModal(); };
+$("#c-save").onclick = async () => {
+  try {
+    S = await api("/custom", {id: $("#c-id").value.trim(), name: $("#c-name").value.trim(), baseUrl: $("#c-base").value.trim(), format: $("#c-format").value, key: $("#c-key").value});
+    render(); $("#cdlg").close(); toast("Endpoint added");
+  } catch (e) { toast(e.message); }
+};
+
+// ---------- proxy token
+$("#tok-on").onclick = async () => { try { const r = await api("/settings", {proxyToken: true}); S = r; render(); $("#tok-val").classList.remove("hide"); $("#tok-val span").textContent = r.proxyTokenValue; toast("New token created. freeflow launchers use it automatically"); } catch (e) { toast(e.message); } };
+$("#tok-off").onclick = async () => { try { S = await api("/settings", {proxyToken: false}); $("#tok-val").classList.add("hide"); render(); } catch (e) { toast(e.message); } };
+
+// ---------- filters
+$("#q").oninput = renderProviders;
+$$("#tiers .chip").forEach((c) => c.onclick = () => { tierFilter = c.dataset.tier; $$("#tiers .chip").forEach((x) => x.setAttribute("aria-pressed", String(x === c))); renderProviders(); });
+
+// ---------- live updates
+async function refresh() { try { S = await api("/state"); render(); } catch { $("#status").className = "pill bad"; $("#status").innerHTML = `<span class="dot"></span>offline`; } }
+function live() {
+  const es = new EventSourcePolyfill();
+  es.onactivity = (a) => { if (!S) return; S.activity.push(a); if (S.activity.length > 100) S.activity.shift(); refresh(); };
+}
+// EventSource cannot send headers, so read the stream with fetch.
+function EventSourcePolyfill() {
+  const self = this;
+  (async function run() {
+    try {
+      const r = await fetch("/admin/api/events", {headers:{"x-freeflow-admin":TOKEN}});
+      const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "";
+      for (;;) {
+        const {done, value} = await reader.read(); if (done) break;
+        buf += dec.decode(value, {stream:true});
+        let i; while ((i = buf.indexOf("\n\n")) >= 0) {
+          const block = buf.slice(0, i); buf = buf.slice(i + 2);
+          const data = block.split("\n").filter((l) => l.startsWith("data: ")).map((l) => l.slice(6)).join("\n");
+          if (data && self.onactivity) self.onactivity(JSON.parse(data));
+        }
+      }
+    } catch {}
+    setTimeout(run, 3000);
+  })();
+}
+try { const t = localStorage.getItem("ff-tab"); if (t) show(t); } catch {}
+refresh().then(live);
+setInterval(refresh, 15000);
+</script>
+</body>
+</html>
