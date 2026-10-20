@@ -20,7 +20,7 @@ const provider = http.createServer((req, res) => {
   req.on("data", (d) => (body += d));
   req.on("end", () => {
     const j = JSON.parse(body || "{}");
-    seen.push({ model: j.model, tools: (j.tools || []).map((t) => t.function.name), last: j.messages?.at(-1)?.role });
+    seen.push({ model: j.model, tools: (j.tools || []).map((t) => t.function.name), hasToolResult: (j.messages || []).some((m) => m.role === "tool" && m.tool_call_id === "call_write_1") });
     if (j.model === "limited") {
       res.writeHead(429, { "content-type": "application/json", "retry-after": "30" });
       return res.end(JSON.stringify({ error: { message: "free tier limit reached" } }));
@@ -95,7 +95,7 @@ try {
     "the Write tool really created the file": fs.existsSync(file) && fs.readFileSync(file, "utf8") === "written through freeflow\n",
     "rate-limited free1 was tried": seen.some((s) => s.model === "limited"),
     "fallback free2 served the turn": seen.some((s) => s.model === "coder" && s.tools.includes("Write")),
-    "tool result was sent back": seen.some((s) => s.last === "tool"),
+    "the tool result went back to the provider": seen.some((s) => s.hasToolResult),
   };
   for (const [k, v] of Object.entries(checks)) log(v ? "PASS" : "FAIL", k);
   // Phase 2: pick a model directly, as `/model` or `--model` would.
