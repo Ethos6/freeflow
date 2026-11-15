@@ -209,6 +209,35 @@ export function createApp(opts = {}) {
     health.fail(healthKey(c.provider, c.ref, err.kind), err);
   }
 
+  /**
+   * A provider failed after the response headers went out, so there is no falling back.
+   * Count it against the provider (so a provider that keeps stalling stops being picked
+   * first), tell the client, and record the request as failed rather than as a short success.
+   * @param {http.ServerResponse} res @param {Activity} a @param {any} c @param {unknown} e
+   * @param {number} t0 request start @param {number} t1 attempt start @param {"anthropic"|"openai"} api
+   */
+  function failMidResponse(res, a, c, e, t0, t1, api) {
+    const err = e instanceof UpstreamError ? e : new UpstreamError(String(/** @type {any} */ (e)?.message || e), { kind: "transient" });
+    noteFailure(a, c, err, t1);
+    const message = `freeflow: ${c.ref} stopped mid-response: ${err.message}`;
+    if (!res.destroyed && /text\/event-stream/i.test(String(res.getHeader("content-type") || ""))) {
+      // Streams carry the error in-band, in each API's own format. The leading blank
+      // line closes any event the provider left half-written.
+      const event = api === "anthropic"
+        ? `event: error\ndata: ${JSON.stringify({ type: "error", error: { type: "overloaded_error", message } })}`
+        : `data: ${JSON.stringify({ error: { message, type: "server_error", code: 503 } })}`;
+      res.end(`\n\n${event}\n\n`);
+    } else {
+      // A half-sent JSON body has no room for an error. Drop the connection so the client
+      // sees a failed request instead of a truncated 200.
+      res.destroy();
+    }
+    a.status = api === "anthropic" ? 529 : 503;
+    a.served = c.ref;
+    a.ms = Date.now() - t0;
+    record(a);
+  }
+
   /** @param {Activity} a @param {"anthropic"|"openai"} api */
   function finalFailure(a, api) {
     const kinds = a.attempts.map((t) => t.kind);
@@ -327,10 +356,7 @@ export function createApp(opts = {}) {
       } catch (e) {
         await openIt?.return?.(undefined).catch(() => {});
         if (ac.signal.aborted) return;
-        if (res.headersSent) {
-          res.end();
-          return;
-        }
+        if (res.headersSent) return failMidResponse(res, a, c, e, t0, t1, "anthropic");
         const err = e instanceof UpstreamError ? e : new UpstreamError(String(/** @type {any} */ (e)?.message || e), { kind: "transient" });
         noteFailure(a, c, err, t1);
       }
@@ -356,7 +382,10 @@ export function createApp(opts = {}) {
       const text = await up.text().catch(() => "");
       throw new UpstreamError(errorText(text), { status: up.status, kind: classify(up.status, text), retryAfterMs: parseRetryAfter(up.headers.get("retry-after")) });
     }
-    res.writeHead(up.status, { "content-type": up.headers.get("content-type") || "application/json", "x-freeflow-model": c.ref });
+    // setHeader rather than writeHead(status, headers) so failMidResponse can read the type back.
+    res.setHeader("content-type", up.headers.get("content-type") || "application/json");
+    res.setHeader("x-freeflow-model", c.ref);
+    res.writeHead(up.status);
     if (up.body) await pipeBody(up.body, res, cfg.timeouts.idleMs);
     res.end();
     a.notes?.push("forwarded natively to Anthropic");
@@ -398,7 +427,10 @@ export function createApp(opts = {}) {
             for (const t of m.tool_calls || []) t.id = alnum9(t.id);
           }
         const up = await openChat({ baseUrl: c.p.baseUrl, key: c.p.key, learnKey: c.ref, request, signal: ac.signal, firstByteMs: cfg.timeouts.firstByteMs, idleMs: cfg.timeouts.idleMs, onNote: (n) => a.notes?.push(`${c.ref}: ${n}`) });
-        res.writeHead(200, { "content-type": up.headers.get("content-type") || "application/json", "cache-control": "no-cache", "x-freeflow-model": c.ref });
+        res.setHeader("content-type", up.headers.get("content-type") || "application/json");
+        res.setHeader("cache-control", "no-cache");
+        res.setHeader("x-freeflow-model", c.ref);
+        res.writeHead(200);
         if (up.body) await pipeBody(up.body, res, cfg.timeouts.idleMs);
         res.end();
         health.ok(c.provider);
@@ -411,7 +443,7 @@ export function createApp(opts = {}) {
         return;
       } catch (e) {
         if (ac.signal.aborted) return;
-        if (res.headersSent) return void res.end();
+        if (res.headersSent) return failMidResponse(res, a, c, e, t0, t1, "openai");
         const err = e instanceof UpstreamError ? e : new UpstreamError(String(/** @type {any} */ (e)?.message || e), { kind: "transient" });
         noteFailure(a, c, err, t1);
       }
