@@ -334,3 +334,69 @@ test("security: cross-site requests from web pages are refused on /v1", async ()
   const same = await fetch(`${base}/v1/messages`, { method: "POST", headers: { "content-type": "application/json", origin: base }, body: JSON.stringify({ max_tokens: 5, messages: [{ role: "user", content: "x" }] }) });
   assert.equal(same.status, 200);
 });
+
+// A provider that fails after freeflow has sent the headers cannot be fallen back from. The
+// failure must still reach the client, the activity log, the stats and the provider's health.
+
+const chatCompletion = (body) => fetch(`${base}/v1/chat/completions`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: "x" }], ...body }) });
+
+/** @param {string} provider @param {string} ref @param {number} status */
+function assertRecordedFailure(provider, ref, status) {
+  const a = srv.app.activity.at(-1);
+  assert.equal(a.status, status);
+  assert.equal(a.served, ref);
+  assert.equal(a.attempts.length, 1);
+  assert.equal(a.attempts[0].ref, ref);
+  assert.equal(a.attempts[0].kind, "transient");
+  assert.match(a.attempts[0].error, /no data for/);
+  assert.equal(srv.app.stats[provider].failures, 1);
+  assert.equal(srv.app.health.isCooling(provider), true, "the stalled provider should cool down");
+  assert.ok(lines.some((l) => l.startsWith("✗") && l.includes(ref)), "the failure should be logged");
+}
+
+test("a natively forwarded Anthropic stream that stalls mid-response ends with an error event and counts as a failure", async () => {
+  await boot({ routes: { default: { model: "nat/stall" } }, fallbacks: [{ model: "m2/ok" }], timeouts: { firstByteMs: 1000, idleMs: 300 } });
+  mock.slow.length = 0;
+  const r = await messages({ stream: true });
+  assert.equal(r.status, 200);
+  const ev = r.events();
+  assert.equal(ev[0].type, "message_start");
+  assert.equal(ev.at(-1).type, "error");
+  assert.equal(ev.at(-1).event, "error");
+  assert.equal(ev.at(-1).error.type, "overloaded_error");
+  assert.match(ev.at(-1).error.message, /nat\/stall stopped mid-response/);
+  assertRecordedFailure("nat", "nat/stall", 529);
+  await wait(100);
+  assert.equal(mock.slow[0].closed, true, "the provider's stream is closed");
+  const next = await messages({});
+  assert.equal(next.status, 200);
+  assert.equal(srv.app.activity.at(-1).served, "m2/ok", "the next request skips the cooling provider");
+});
+
+test("a natively forwarded Anthropic JSON reply cut off mid-body drops the connection instead of returning a truncated 200", async () => {
+  await boot({ routes: { default: { model: "nat/stall" } }, timeouts: { firstByteMs: 1000, idleMs: 300 } });
+  await assert.rejects(messages({}), "the client must see a failed request");
+  assertRecordedFailure("nat", "nat/stall", 529);
+});
+
+test("an OpenAI passthrough stream that stalls mid-response ends with an error chunk and counts as a failure", async () => {
+  await boot({ routes: { default: { model: "m1/stall" } }, fallbacks: [{ model: "m2/ok" }], timeouts: { firstByteMs: 1000, idleMs: 300 } });
+  const r = await chatCompletion({ model: "default", stream: true });
+  assert.equal(r.status, 200);
+  const chunks = (await r.text()).split("\n\n").filter((b) => b.startsWith("data: {")).map((b) => JSON.parse(b.slice(6)));
+  assert.equal(chunks[0].choices[0].delta.content, "first");
+  assert.match(chunks.at(-1).error.message, /m1\/stall stopped mid-response/);
+  assert.equal(chunks.at(-1).error.type, "server_error");
+  assertRecordedFailure("m1", "m1/stall", 503);
+  const next = await chatCompletion({ model: "default", stream: true });
+  assert.equal(next.headers.get("x-freeflow-model"), "m2/ok", "the next request skips the cooling provider");
+  await next.text();
+});
+
+test("an OpenAI passthrough JSON reply cut off mid-body drops the connection and counts as a failure", async () => {
+  await boot({ routes: { default: { model: "m1/jsonstall" } }, timeouts: { firstByteMs: 1000, idleMs: 300 } });
+  const r = await chatCompletion({ model: "default" });
+  assert.equal(r.status, 200);
+  await assert.rejects(r.text(), "the client must see a failed request");
+  assertRecordedFailure("m1", "m1/jsonstall", 503);
+});
