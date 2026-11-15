@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: when a natively forwarded Anthropic response or a `/v1/chat/completions` passthrough failed after the headers were sent (for example on the idle timeout), the failure was not recorded in the activity log or stats, the provider was not put in a cooldown, and the client got a silently truncated 200. Streams now end with an error event in the API's own format, cut-off JSON replies drop the connection, and the attempt counts as a provider failure. ([#7](https://github.com/Ethos6/freeflow/issues/7))
+
 ## 1.0.0 (2026-10-20)
 
 First release.
