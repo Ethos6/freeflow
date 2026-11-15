@@ -73,6 +73,10 @@ export async function startMock(opts = {}) {
         return res.end(JSON.stringify({ error: { message: "Unrecognized request argument supplied: stream_options" } }));
       }
       if (model === "hang") return; // never answers
+      if (model === "jsonstall") {
+        res.writeHead(200, { "content-type": "application/json" });
+        return res.write('{"id":"x","object":"chat.completion","choices":[{"index":0,"message":{"role":"assistant","content":"par'); // never finishes
+      }
       if (model === "json" || !j.stream) {
         res.writeHead(200, { "content-type": "application/json" });
         const msg = model === "jsontools"
@@ -131,6 +135,21 @@ export async function startMock(opts = {}) {
     if (req.headers["x-api-key"] !== "sk-ant-test") {
       res.writeHead(401, { "content-type": "application/json" });
       return res.end(JSON.stringify({ type: "error", error: { type: "authentication_error", message: "bad key" } }));
+    }
+    if (j.model === "stall") {
+      // Starts answering, then goes silent: freeflow can no longer fall back.
+      const rec = { closed: false };
+      mock.slow.push(rec);
+      res.on("close", () => (rec.closed = true));
+      if (j.stream) {
+        res.writeHead(200, { "content-type": "text/event-stream" });
+        res.write(`event: message_start\ndata: ${JSON.stringify({ type: "message_start", message: { id: "msg_native", type: "message", role: "assistant", model: j.model, content: [], usage: { input_tokens: 1, output_tokens: 0 } } })}\n\n`);
+        res.write(`event: content_block_delta\ndata: ${JSON.stringify({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "partial" } })}\n\n`);
+      } else {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.write('{"id":"msg_native","type":"message","content":[{"type":"text","text":"par');
+      }
+      return; // never sends more
     }
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({ id: "msg_native", type: "message", role: "assistant", model: j.model, content: [{ type: "text", text: `native:${j.messages.length}` }], stop_reason: "end_turn", stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1 } }));
